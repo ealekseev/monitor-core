@@ -35,6 +35,13 @@ typedef struct
 
 typedef struct
 {
+  char *name;
+  struct addrinfo *ai;
+  unsigned int ref_count;
+} g_inet6_addr;
+
+typedef struct
+{
   int sockfd;
   struct sockaddr sa;
   unsigned int ref_count;
