@@ -25,7 +25,7 @@ data_thread ( void *arg )
    int i, bytes_read, rval;
    data_source_list_t *d = (data_source_list_t *)arg;
    g_inet_addr *addr;
-   g_tcp_socket *sock=0;
+   g_tcp6_socket *sock=0;
    datum_t key;
    char *buf;
    /* This will grow as needed */
@@ -68,7 +68,7 @@ data_thread ( void *arg )
          
          /* If we successfully read from a good data source last time then try the same host again first. */
          if(d->last_good_index != -1)
-           sock = g_tcp_socket_new ( d->sources[d->last_good_index] );
+           sock = g_tcp6_socket_new ( d->sources[d->last_good_index] );
 
          /* If there was no good connection last time or the above connect failed then try each host in the list. */
          if(!sock)
@@ -76,7 +76,7 @@ data_thread ( void *arg )
              for(i=0; i < d->num_sources; i++)
                {
                  /* Find first viable source in list. */
-                 sock = g_tcp_socket_new ( d->sources[i] );
+                 sock = g_tcp6_socket_new ( d->sources[i] );
                  if( sock )
                    {
                      d->last_good_index = i;
@@ -297,7 +297,7 @@ data_thread ( void *arg )
          d->dead = 0;
 
        take_a_break:
-         g_tcp_socket_delete(sock);
+         g_tcp6_socket_delete(sock);
 
          end = apr_time_now();
          /* Sleep somewhere between (step +/- SLEEP_RANDOMIZE percent.) */
