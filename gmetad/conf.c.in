@@ -80,7 +80,7 @@ static DOTCONF_CB(cb_data_source)
    int rv=0;
    unsigned long step;
    unsigned int source_index=0;
-   char *p, *str, *port;
+   char *p, *str, *host, *port;
    char *endptr;
    struct sockaddr_in sa;
    g_inet6_addr ia;
@@ -126,26 +126,45 @@ static DOTCONF_CB(cb_data_source)
       {
          str = cmd->data.list[i];
 
-         p = strchr( str, ':' );
-         if( p )
-            {
-               /* Port is specified */
-               *p = '\0';
-               port = p+1;
+	p = strchr(str, '[');
+        if (p != NULL)
+            host = p + 1;
+        else
+            host = str;
+        p = strchr(str, ']');
+        if (p) {
+            *p = '\0';
+            if (*(p+1) == ':')
+                port = p+2;
+            else
+                port = "8649";
+        }
+        else {
+            p = strchr(host, ':');
+            if (p) {
+                if (p == strrchr(host, ':')) {
+                    *p = '\0';
+                    port = p+1;
+                }
+                else
+                    port = "8649";
             }
-         else
-            port = "8649";
+            else
+                port = "8649";
+        }
 
-        rv = g_getaddrinfo(str, port, &ia, NULL);
+	
+
+        rv = g_getaddrinfo(host, port, &ia, NULL);
         if (rv) {
             err_msg("Warning: we failed to resolve data source name %s", cmd->data.list[i]);
             continue;
         }
         
-        debug_msg("Trying to connect to %s:%s for [%s]", str, port, dslist->name);
+        debug_msg("Trying to connect to %s:%s for [%s]", host, port, dslist->name);
         dslist->sources[dslist->num_sources] = (g_inet6_addr *)malloc(sizeof(g_inet6_addr));
         if (dslist->sources[dslist->num_sources] == NULL)
-            err_quit("Unable to create inetaddr [%s:%s] and save it to [%s]", str, port, dslist->name);
+            err_quit("Unable to create inetaddr [%s:%s] and save it to [%s]", host, port, dslist->name);
         else {
             memcpy(dslist->sources[dslist->num_sources], &ia, sizeof(g_inet6_addr));
             dslist->num_sources++;
