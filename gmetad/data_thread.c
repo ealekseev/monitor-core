@@ -25,7 +25,7 @@ data_thread ( void *arg )
    int i, bytes_read, rval;
    data_source_list_t *d = (data_source_list_t *)arg;
    g_inet_addr *addr;
-   g_tcp6_socket *sock=0;
+   g_tcp_socket *sock=0;
    datum_t key;
    char *buf;
    /* This will grow as needed */
@@ -297,7 +297,7 @@ data_thread ( void *arg )
          d->dead = 0;
 
        take_a_break:
-         g_tcp6_socket_delete(sock);
+         g_tcp_socket_delete(sock);
 
          end = apr_time_now();
          /* Sleep somewhere between (step +/- SLEEP_RANDOMIZE percent.) */

@@ -140,32 +140,11 @@ g_tcp_socket_unref(g_tcp_socket* s)
     }
 }
 
-static void
-g_tcp6_socket_unref(g_tcp6_socket* s)
-{
-  if( s == NULL )
-     return;
-
-  --s->ref_count;
-
-  if (s->ref_count == 0)
-    {
-       close(s->sockfd);
-       free(s);
-    }
-}
-
 void
 g_tcp_socket_delete(g_tcp_socket* s)
 {
   if (s != NULL)
     g_tcp_socket_unref(s);
-}
-
-void g_tcp6_socket_delete(g_tcp6_socket* s)
-{
-  if (s != NULL)
-    g_tcp6_socket_unref(s);
 }
 
 g_tcp_socket*
