@@ -70,7 +70,7 @@ g_gethostbyname(const char* hostname, struct sockaddr_in* sa, char** nicename)
   return rv;
 }
 
-int g_getaddrinfo(const char* hostname, const char* service, struct g_inet6_addr* ia, char** nicename)
+int g_getaddrinfo(const char* hostname, const char* service, g_inet6_addr* ia, char** nicename)
 {
   int rv = 0;
   struct addrinfo hints;
@@ -86,13 +86,13 @@ int g_getaddrinfo(const char* hostname, const char* service, struct g_inet6_addr
   hints.ai_addr = NULL;
   hints.ai_next = NULL;
   
-  s = getaddrinfo(NULL, argv[1], &hints, &result);
+  s = getaddrinfo(hostname, service, &hints, &result);
   if (s != 0) {
     return s;
   }
   else {
     ia->name = (char *)strdup(hostname);
-    ia->ia = result;
+    ia->ai = result;
     ia->ref_count = 1;
   }
   return s;

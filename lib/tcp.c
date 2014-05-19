@@ -89,13 +89,14 @@ g_tcp6_socket_new (const g_inet6_addr* addr)
   struct addrinfo *result, *rp;
   int sfd;
   
-  for (rp = addr->ia; rp != NULL; rp = rp->ai_next) {
+  for (rp = addr->ai; rp != NULL; rp = rp->ai_next) {
     sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     if (sfd == -1)
       continue;
     if (connect(sfd, rp->ai_addr, rp->ai_addrlen) != -1) {
       tsa = rp->ai_addr;
       break; //Success
+    }
     close(sfd);
   }
   if (rp == NULL)
