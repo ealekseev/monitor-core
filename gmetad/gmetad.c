@@ -74,7 +74,7 @@ print_sources ( datum_t *key, datum_t *val, void *arg )
 {
    int i;
    data_source_list_t *d = *((data_source_list_t **)(val->data));
-   g_inet_addr *addr;
+   g_inet6_addr *addr;
 
    fprintf(stderr,"Source: [%s, step %d] has %d sources\n",
       (char*) key->data, d->step, d->num_sources);
