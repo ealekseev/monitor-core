@@ -17,6 +17,7 @@
 #include <sys/poll.h>
 #include <arpa/inet.h>
 #include <apr_time.h>
+#include <netdb.h>
 
 #ifdef WITH_MEMCACHED
 #include <libmemcached-1.0/memcached.h>
@@ -36,6 +37,7 @@ int riemann_failures = 0;
 #include "export_helpers.h"
 #include "gm_scoreboard.h"
 
+#define MAX_PORT_LEN 6
 #define PATHSIZE 4096
 extern gmetad_config_t gmetad_config;
 
@@ -162,6 +164,69 @@ init_riemann_tcp_socket (const char *hostname, uint16_t port)
       free (s);
       return NULL;
     }
+
+  return s;
+}
+
+g_tcp_socket*
+init_riemann_tcp6_socket (const char *hostname, uint16_t port)
+{
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+  int sfd;
+
+  int sockfd;
+  g_tcp_socket* s;
+  struct sockaddr_in *sa_in;
+  struct hostent *hostinfo;
+  int rv;
+  char tcp_port[MAX_PORT_LEN];
+
+  struct timeval timeout;
+  timeout.tv_sec = 0;
+  timeout.tv_usec = RIEMANN_TCP_TIMEOUT * 1000;
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_STREAM;
+  hints.ai_flags = 0;    
+  hints.ai_protocol = 0;          /* Any protocol */
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+
+  snprintf(tcp_port, MAX_PORT_LEN, "%d", port);
+
+  rv = getaddrinfo(hostname, tcp_port, &hints, &result);
+  if (rv != 0)
+    err_quit("getaddrinfo: %s\n", gai_strerror(rv));
+
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (sfd == -1)
+      continue;
+    if (setsockopt (sfd, SOL_SOCKET, SO_RCVTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+      close(sfd);
+      continue;
+    }
+    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+      close(sfd);
+      continue;
+    }
+    if (connect(sfd, rp->ai_addr, sizeof(struct sockaddr)) == 0)
+      break;
+    close(sfd);
+  }
+  if (rp == NULL)
+    return NULL;
+  
+  s = malloc( sizeof( g_tcp_socket ) );
+  memset( s, 0, sizeof( g_tcp_socket ));
+  s->sockfd = sfd;
+  s->ref_count = 1;
+
+  if (riemann_tcp_socket)
+      close (riemann_tcp_socket->sockfd);
 
   return s;
 }
