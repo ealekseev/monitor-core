@@ -109,6 +109,55 @@ init_riemann_udp_socket (const char *hostname, uint16_t port)
    return s;
 }
 
+g_udp_socket*
+init_riemann_udp6_socket (const char *hostname, uint16_t port)
+{
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+  int sfd;
+
+  g_udp_socket* s;
+  int rv;
+  char udp_port[MAX_PORT_LEN];
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_flags = 0;
+  hints.ai_protocol = 0;          /* Any protocol */
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+
+  snprintf(udp_port, MAX_PORT_LEN, "%d", port);
+
+  rv = getaddrinfo(hostname, udp_port, &hints, &result);
+  if (rv != 0)
+    err_quit("getaddrinfo: %s\n", gai_strerror(rv));
+
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (sfd == -1)
+      continue;
+    if (connect(sfd, rp->ai_addr, sizeof(struct sockaddr)) == 0)
+      break;
+    close(sfd);
+  }
+  if (rp == NULL)
+    return NULL;
+
+  s = malloc( sizeof( g_udp_socket ) );
+  memset( s, 0, sizeof( g_udp_socket ));
+  s->sockfd = sfd;
+  s->ref_count = 1;
+
+  if (riemann_udp_socket)
+      close (riemann_udp_socket->sockfd);
+
+  return s;
+}
+
+
 g_tcp_socket*
 init_riemann_tcp_socket (const char *hostname, uint16_t port)
 {
@@ -175,10 +224,7 @@ init_riemann_tcp6_socket (const char *hostname, uint16_t port)
   struct addrinfo *result, *rp;
   int sfd;
 
-  int sockfd;
   g_tcp_socket* s;
-  struct sockaddr_in *sa_in;
-  struct hostent *hostinfo;
   int rv;
   char tcp_port[MAX_PORT_LEN];
 
@@ -209,7 +255,7 @@ init_riemann_tcp6_socket (const char *hostname, uint16_t port)
       close(sfd);
       continue;
     }
-    if (setsockopt (sockfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
+    if (setsockopt (sfd, SOL_SOCKET, SO_SNDTIMEO, (char *)&timeout, sizeof(timeout)) < 0) {
       close(sfd);
       continue;
     }
