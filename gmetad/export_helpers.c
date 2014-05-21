@@ -722,8 +722,7 @@ send_event_to_riemann (Event *event)
    msg__pack(riemann_msg, buf);
 
    pthread_mutex_lock( &riemann_socket_mutex );
-   if ((nbytes = sendto (riemann_udp_socket->sockfd, buf, len, 0,
-                      (struct sockaddr_in*)&riemann_udp_socket->sa, sizeof (struct sockaddr_in))) == -1)
+   if (nbytes = send(riemann_udp_socket->sockfd, buf, len, 0) == -1)
       errsv = errno;
    pthread_mutex_unlock( &riemann_socket_mutex );
    free (buf);
