@@ -139,7 +139,7 @@ init_riemann_udp6_socket (const char *hostname, uint16_t port)
     sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
     if (sfd == -1)
       continue;
-    if (connect(sfd, rp->ai_addr, sizeof(struct sockaddr)) == 0)
+    if (connect(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
     close(sfd);
   }
@@ -259,7 +259,7 @@ init_riemann_tcp6_socket (const char *hostname, uint16_t port)
       close(sfd);
       continue;
     }
-    if (connect(sfd, rp->ai_addr, sizeof(struct sockaddr)) == 0)
+    if (connect(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
       break;
     close(sfd);
   }
@@ -722,7 +722,7 @@ send_event_to_riemann (Event *event)
    msg__pack(riemann_msg, buf);
 
    pthread_mutex_lock( &riemann_socket_mutex );
-   if (nbytes = send(riemann_udp_socket->sockfd, buf, len, 0) == -1)
+   if ((nbytes = send(riemann_udp_socket->sockfd, buf, len, 0)) == -1)
       errsv = errno;
    pthread_mutex_unlock( &riemann_socket_mutex );
    free (buf);
