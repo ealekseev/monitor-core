@@ -169,7 +169,6 @@ static DOTCONF_CB(cb_data_source)
             memcpy(dslist->sources[dslist->num_sources], &ia, sizeof(g_inet6_addr));
             dslist->num_sources++;
         }
-        free(str);
       }
 
    key.data = cmd->data.list[0];
