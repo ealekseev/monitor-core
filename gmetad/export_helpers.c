@@ -16,6 +16,7 @@
 #include <netdb.h>
 #include <sys/poll.h>
 #include <arpa/inet.h>
+#include <netdb.h>
 
 #ifdef WITH_MEMCACHED
 #include <libmemcached-1.0/memcached.h>
@@ -28,6 +29,7 @@
 
 #include "export_helpers.h"
 
+#define MAX_PORT_LEN 6
 #define PATHSIZE 4096
 extern gmetad_config_t gmetad_config;
 
@@ -97,6 +99,55 @@ init_riemann_udp_socket (const char *hostname, uint16_t port)
 
    return s;
 }
+
+g_udp_socket*
+init_riemann_udp6_socket (const char *hostname, uint16_t port)
+{
+  struct addrinfo hints;
+  struct addrinfo *result, *rp;
+  int sfd;
+
+  g_udp_socket* s;
+  int rv;
+  char udp_port[MAX_PORT_LEN];
+
+  memset(&hints, 0, sizeof(struct addrinfo));
+  hints.ai_family = AF_UNSPEC;    /* Allow IPv4 or IPv6 */
+  hints.ai_socktype = SOCK_DGRAM;
+  hints.ai_flags = 0;
+  hints.ai_protocol = 0;          /* Any protocol */
+  hints.ai_canonname = NULL;
+  hints.ai_addr = NULL;
+  hints.ai_next = NULL;
+
+  snprintf(udp_port, MAX_PORT_LEN, "%d", port);
+
+  rv = getaddrinfo(hostname, udp_port, &hints, &result);
+  if (rv != 0)
+    err_quit("getaddrinfo: %s\n", gai_strerror(rv));
+
+  for (rp = result; rp != NULL; rp = rp->ai_next) {
+    sfd = socket(rp->ai_family, rp->ai_socktype, rp->ai_protocol);
+    if (sfd == -1)
+      continue;
+    if (connect(sfd, rp->ai_addr, rp->ai_addrlen) == 0)
+      break;
+    close(sfd);
+  }
+  if (rp == NULL)
+    return NULL;
+
+  s = malloc( sizeof( g_udp_socket ) );
+  memset( s, 0, sizeof( g_udp_socket ));
+  s->sockfd = sfd;
+  s->ref_count = 1;
+
+  if (riemann_udp_socket)
+      close (riemann_udp_socket->sockfd);
+
+  return s;
+}
+
 #endif /* WITH_RIEMANN */
 
 void init_sockaddr (struct sockaddr_in *name, const char *hostname, uint16_t port)
@@ -494,8 +545,8 @@ send_data_to_riemann (const char *grid, const char *cluster, const char *host, c
             evt.time, evt.host, evt.service, evt.state, evt.metric_f, evt.metric_d, evt.metric_sint64, evt.description, evt.ttl, evt.n_tags, evt.n_attributes);
 
   int nbytes;
-  nbytes = sendto (riemann_udp_socket->sockfd, buf, len, 0,
-                         (struct sockaddr_in*)&riemann_udp_socket->sa, sizeof (struct sockaddr_in));
+  
+  nbytes = send(riemann_udp_socket->sockfd, buf, len, 0);
 
   if (nbytes != len)
   {
